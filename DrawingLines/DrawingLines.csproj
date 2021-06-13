@@ -6,4 +6,8 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DrawingLines.Calculator\DrawingLines.Calculator.csproj" />
+  </ItemGroup>
+
 </Project>

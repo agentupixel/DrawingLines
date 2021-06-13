@@ -1,6 +1,7 @@
 ﻿using DrawingLines.Calculator.Structures;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 
 namespace DrawingLines.Calculator
@@ -16,10 +17,10 @@ namespace DrawingLines.Calculator
             _existingLines = new List<Polyline>();
         }
 
-        private IEnumerable<Line> BuildSegments(Point start, Point end)
+        private IEnumerable<Line> BuildSegments(Point start, Point end, Point? previousPoint = null)
         {
             Line newLine = new(start, end);
-            var crossingLines = GetCrossingLines(start, end);
+            var crossingLines = GetCrossingLines(start, end, previousPoint);
             if (!crossingLines.Any())
             {
                 return new Line[] { newLine };
@@ -28,7 +29,7 @@ namespace DrawingLines.Calculator
             {
                 var nearestCrossingLine = GetNearestCrossingLine(newLine, crossingLines);
                 return BuildSegments(start, nearestCrossingLine.Start)
-                    .Concat(BuildSegments(nearestCrossingLine.Start, end));
+                    .Concat(BuildSegments(nearestCrossingLine.Start, end, start));
             }
         }
 
@@ -58,7 +59,7 @@ namespace DrawingLines.Calculator
             return crossingLines[Array.IndexOf(crossingDistances, crossingDistances.Min())];
         }
 
-        private Line[] GetCrossingLines(Point start, Point end)
+        private Line[] GetCrossingLines(Point start, Point end, Point? previousPoint = null)
         {
             Vector newLineVector = new(start, end);
             var lines = new List<Line>();
@@ -73,8 +74,8 @@ namespace DrawingLines.Calculator
                     int v2 = newLineVector.Multiply(newStartOldEnd);
                     int v3 = existingVector.Multiply(newStartOldStart);
                     int v4 = existingVector.Multiply(new Vector(end, segment.Start));
-                    if((v1 > 0 && v2 < 0 || v1 < 0 && v2 > 0)
-                        && (v3 > 0 && v4 < 0 || v3 < 0 && v4 > 0))
+                    if(((v1 > 0 && v2 < 0 || v1 < 0 && v2 > 0)
+                        && (v3 > 0 && v4 < 0 || v3 < 0 && v4 > 0)))
                     {
                         var a = segment.GetA();
                         var b = segment.GetB();
@@ -100,6 +101,19 @@ namespace DrawingLines.Calculator
                             {
                                 lines.Add(segment);
                             }
+                        }
+                    }
+                    if (v1 == 0 || v2 == 0 || v3 == 0 || v4 == 0)
+                    {
+                        if (!previousPoint.HasValue)
+                        {
+                            continue;
+                        }
+                        var crossingLines = GetCrossingLines(previousPoint.Value, end);
+                        var crossedSegments = polyline.Segments.Count(s => crossingLines.Contains(s));
+                        if (crossedSegments > 0 && crossedSegments < polyline.Segments.Length)
+                        {
+                            lines.Add(segment);
                         }
                     }
                 }

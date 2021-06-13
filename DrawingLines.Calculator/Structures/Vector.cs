@@ -1,6 +1,8 @@
-﻿namespace DrawingLines.Calculator.Structures
+﻿using System.Drawing;
+
+namespace DrawingLines.Calculator.Structures
 {
-    public ref struct Vector
+    public struct Vector
     {
         public int X { get; }
         public int Y { get; }
