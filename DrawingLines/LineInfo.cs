@@ -4,15 +4,21 @@ namespace DrawingLines
 {
     public struct LineInfo
     {
-        public LineInfo(Color color, Point x, Point y)
+        public LineInfo(Color color, Point start, Point end)
         {
             Color = color;
-            X = x;
-            Y = y;
+            Start = start;
+            End = end;
         }
 
         public Color Color { get; }
-        public Point X { get; }
-        public Point Y { get; }
+        public Point Start { get; }
+        public Point End { get; }
+
+        public bool Matches(LineInfo other)
+        {
+            return Start.Equals(other.Start) && End.Equals(other.End)
+                || End.Equals(other.Start) && Start.Equals(other.End);
+        }
     }
 }

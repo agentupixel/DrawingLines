@@ -21,12 +21,18 @@ namespace DrawingLines.Calculator.Structures
 
         public double GetA()
         {
-            return (Start.X - End.X) == 0 ? 0 : (Start.Y - End.Y) / (Start.X - End.X);
+            return (Start.X - End.X) == 0 ? 0 : (double)(Start.Y - End.Y) / (Start.X - End.X);
         }
 
         public double GetB()
         {
             return Start.Y - GetA() * Start.X;
+        }
+
+        public bool Matches(Line other)
+        {
+            return Start.Equals(other.Start) && End.Equals(other.End)
+                || End.Equals(other.Start) && Start.Equals(other.End);
         }
     }
 }

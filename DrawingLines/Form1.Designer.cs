@@ -38,6 +38,7 @@ namespace DrawingLines
             this.ClientSize = new System.Drawing.Size(1006, 631);
             this.Name = "DrawingLinesForm";
             this.Text = "DrawingLines";
+            this.Load += new System.EventHandler(this.DrawingLinesForm_Load);
             this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick);
             this.ResumeLayout(false);
 
