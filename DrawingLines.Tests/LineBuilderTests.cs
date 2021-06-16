@@ -13,7 +13,7 @@ namespace DrawingLines.Tests
         [SetUp]
         public void SetUp()
         {
-            _builder = new LineBuilder();
+            _builder = new LineBuilder(new Point(10, 10));
         }
 
         [Test]
@@ -39,13 +39,6 @@ namespace DrawingLines.Tests
             Assert.AreEqual(new Point(7, 3), points[8]);
             Assert.AreEqual(new Point(7, 4), points[9]);
             Assert.AreEqual(new Point(7, 5), points[10]);
-        }
-
-        [Test]
-        public void SimpleCrossingLines()
-        {
-            // Given
-            
         }
     }
 }
