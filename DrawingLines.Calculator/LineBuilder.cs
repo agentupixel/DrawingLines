@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 
 namespace DrawingLines.Calculator
 {
@@ -26,9 +27,18 @@ namespace DrawingLines.Calculator
             var points = new List<Point>();
             points.Add(start);
             var lastPoint = start;
+            byte counter = 0;
             while (!points.Contains(end))
             {
-                lastPoint = GetNextPoint(lastPoint, end, points);
+                lastPoint = GetNextPoint(lastPoint, end, points, start);
+                if (start.Equals(lastPoint))
+                {
+                    if (counter++ > 4)
+                    {
+                        throw new Exception("No path available");
+                    }
+                    continue;
+                }
                 points.Add(lastPoint);
             }
             var minimumRequiredPoints = new List<Point>();
@@ -54,12 +64,6 @@ namespace DrawingLines.Calculator
                 && point.X < _rightBottomCorner.X && point.Y < _rightBottomCorner.Y;
         }
 
-        private bool TryMovingLeft(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
-        {
-            var point = new Point(lastPoint.X - 1, lastPoint.Y);
-            return TryMoving(currentPoints, out nextPoint, point);
-        }
-
         private bool TryMoving(List<Point> currentPoints, out Point nextPoint, Point point)
         {
             if (!_takenPoints.Contains(point) && !currentPoints.Contains(point) && IsOnScreen(point))
@@ -71,13 +75,19 @@ namespace DrawingLines.Calculator
             return false;
         }
 
+        private bool TryMovingLeft(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
+        {
+            var point = new Point(lastPoint.X - 1, lastPoint.Y);
+            return TryMoving(currentPoints, out nextPoint, point);
+        }
+
         private bool TryMovingUp(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
         {
             var point = new Point(lastPoint.X, lastPoint.Y - 1);
             return TryMoving(currentPoints, out nextPoint, point);
         }
 
-        private bool TryMovingBelow(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
+        private bool TryMovingDown(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
         {
             var point = new Point(lastPoint.X, lastPoint.Y + 1);
             return TryMoving(currentPoints, out nextPoint, point);
@@ -89,7 +99,7 @@ namespace DrawingLines.Calculator
             return TryMoving(currentPoints, out nextPoint, point);
         }
 
-        private Point GetNextPoint(Point lastPoint, Point nextPoint, List<Point> currentPoints)
+        private Point GetNextPoint(Point lastPoint, Point nextPoint, List<Point> currentPoints, Point startingPoint)
         {
             Point next;
             if(lastPoint.Y > nextPoint.Y)
@@ -114,13 +124,13 @@ namespace DrawingLines.Calculator
                             }
                             else
                             {
-                                if(TryMovingBelow(lastPoint, currentPoints, out next))
+                                if(TryMovingDown(lastPoint, currentPoints, out next))
                                 {
                                     return next;
                                 }
                                 else
                                 {
-                                    throw new Exception("No path available");
+                                    return startingPoint;
                                 }    
                             }
                         }
@@ -139,13 +149,13 @@ namespace DrawingLines.Calculator
                             }
                             else
                             {
-                                if (TryMovingBelow(lastPoint, currentPoints, out next))
+                                if (TryMovingDown(lastPoint, currentPoints, out next))
                                 {
                                     return next;
                                 }
                                 else
                                 {
-                                    throw new Exception("No path available");
+                                    return startingPoint;
                                 }
                             }
                         }
@@ -170,7 +180,7 @@ namespace DrawingLines.Calculator
                             }
                             else
                             {
-                                if (TryMovingBelow(lastPoint, currentPoints, out next))
+                                if (TryMovingDown(lastPoint, currentPoints, out next))
                                 {
                                     return next;
                                 }
@@ -182,7 +192,7 @@ namespace DrawingLines.Calculator
                                     }
                                     else
                                     {
-                                        throw new Exception("No path available");
+                                        return startingPoint;
                                     }
                                 }
                             }
@@ -202,7 +212,7 @@ namespace DrawingLines.Calculator
                             }
                             else
                             {
-                                if (TryMovingBelow(lastPoint, currentPoints, out next))
+                                if (TryMovingDown(lastPoint, currentPoints, out next))
                                 {
                                     return next;
                                 }
@@ -214,7 +224,7 @@ namespace DrawingLines.Calculator
                                     }
                                     else
                                     {
-                                        throw new Exception("No path available");
+                                        return startingPoint;
                                     }
                                 }
                             }
@@ -223,7 +233,7 @@ namespace DrawingLines.Calculator
                 }
                 else
                 {
-                    if (TryMovingBelow(lastPoint, currentPoints, out next))
+                    if (TryMovingDown(lastPoint, currentPoints, out next))
                     {
                         return next;
                     }
@@ -249,7 +259,7 @@ namespace DrawingLines.Calculator
                                     }
                                     else
                                     {
-                                        throw new Exception("No path available");
+                                        return startingPoint;
                                     }
                                 }
                             }
@@ -274,7 +284,7 @@ namespace DrawingLines.Calculator
                                     }
                                     else
                                     {
-                                        throw new Exception("No path available");
+                                        return startingPoint;
                                     }
                                 }
                             }
