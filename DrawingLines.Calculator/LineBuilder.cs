@@ -1,5 +1,4 @@
-﻿using DrawingLines.Calculator.Structures;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -8,131 +7,281 @@ namespace DrawingLines.Calculator
 {
     public class LineBuilder
     {
-        private readonly IList<Polyline> _existingLines;
-        private int _identifier = 0;
-        public IEnumerable<Polyline> Lines => _existingLines;
+        private readonly HashSet<Point> _takenPoints = new();
+        private readonly Point _leftTopCorner = new(0, 0);
+        private Point _rightBottomCorner;
 
-        public LineBuilder()
+        public LineBuilder(Point corner)
         {
-            _existingLines = new List<Polyline>();
+            _rightBottomCorner = corner;
         }
 
-        private IEnumerable<Line> BuildSegments(Point start, Point end, Point? previousPoint = null)
+        public void SetSize(Point corner)
         {
-            Line newLine = new(start, end);
-            var crossingLines = GetCrossingLines(start, end, previousPoint);
-            if (!crossingLines.Any())
+            _rightBottomCorner = corner;
+        }
+
+        public List<Point> BuildLine(Point start, Point end)
+        {
+            var points = new List<Point>();
+            points.Add(start);
+            var lastPoint = start;
+            while (!points.Contains(end))
             {
-                Console.WriteLine($"Start: {newLine.Start}, end: {newLine.End}");
-                return new Line[] { newLine };
+                lastPoint = GetNextPoint(lastPoint, end, points);
+                points.Add(lastPoint);
+            }
+            var minimumRequiredPoints = new List<Point>();
+            minimumRequiredPoints.Add(points[^1]);
+            while (!minimumRequiredPoints.Contains(start))
+            {
+                var firstNeighbour = points.First(p => IsNeighbour(p, minimumRequiredPoints.Last()));
+                minimumRequiredPoints.Add(firstNeighbour);
+                _takenPoints.Add(firstNeighbour);
+            }
+            return minimumRequiredPoints;
+        }
+
+        private static bool IsNeighbour(Point point1, Point point2)
+        {
+            return (point1.X - point2.X == 0 && Math.Abs(point1.Y - point2.Y) == 1)
+                || (point1.Y - point2.Y == 0 && Math.Abs(point1.X - point2.X) == 1);
+        }
+
+        private bool IsOnScreen(Point point)
+        {
+            return point.X > _leftTopCorner.X && point.Y > _leftTopCorner.Y
+                && point.X < _rightBottomCorner.X && point.Y < _rightBottomCorner.Y;
+        }
+
+        private bool TryMovingLeft(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
+        {
+            var point = new Point(lastPoint.X - 1, lastPoint.Y);
+            return TryMoving(currentPoints, out nextPoint, point);
+        }
+
+        private bool TryMoving(List<Point> currentPoints, out Point nextPoint, Point point)
+        {
+            if (!_takenPoints.Contains(point) && !currentPoints.Contains(point) && IsOnScreen(point))
+            {
+                nextPoint = point;
+                return true;
+            }
+            nextPoint = default;
+            return false;
+        }
+
+        private bool TryMovingUp(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
+        {
+            var point = new Point(lastPoint.X, lastPoint.Y - 1);
+            return TryMoving(currentPoints, out nextPoint, point);
+        }
+
+        private bool TryMovingBelow(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
+        {
+            var point = new Point(lastPoint.X, lastPoint.Y + 1);
+            return TryMoving(currentPoints, out nextPoint, point);
+        }
+
+        private bool TryMovingRight(Point lastPoint, List<Point> currentPoints, out Point nextPoint)
+        {
+            var point = new Point(lastPoint.X + 1, lastPoint.Y);
+            return TryMoving(currentPoints, out nextPoint, point);
+        }
+
+        private Point GetNextPoint(Point lastPoint, Point nextPoint, List<Point> currentPoints)
+        {
+            Point next;
+            if(lastPoint.Y > nextPoint.Y)
+            {
+                if(TryMovingUp(lastPoint, currentPoints, out next))
+                {
+                    return next;
+                }
+                else
+                {
+                    if (lastPoint.X > nextPoint.X)
+                    {
+                        if(TryMovingLeft(lastPoint, currentPoints, out next))
+                        {
+                            return next;
+                        }
+                        else
+                        {
+                            if(TryMovingRight(lastPoint, currentPoints, out next))
+                            {
+                                return next;
+                            }
+                            else
+                            {
+                                if(TryMovingBelow(lastPoint, currentPoints, out next))
+                                {
+                                    return next;
+                                }
+                                else
+                                {
+                                    throw new Exception("No path available");
+                                }    
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (TryMovingRight(lastPoint, currentPoints, out next))
+                        {
+                            return next;
+                        }
+                        else
+                        {
+                            if (TryMovingLeft(lastPoint, currentPoints, out next))
+                            {
+                                return next;
+                            }
+                            else
+                            {
+                                if (TryMovingBelow(lastPoint, currentPoints, out next))
+                                {
+                                    return next;
+                                }
+                                else
+                                {
+                                    throw new Exception("No path available");
+                                }
+                            }
+                        }
+                    }
+                }
             }
             else
             {
-                var nearestCrossingLine = GetNearestCrossingLine(newLine, crossingLines);
-                if(start.Equals(nearestCrossingLine.Start)
-                    || nearestCrossingLine.Matches(new Line(start, nearestCrossingLine.Start)))
+                if (lastPoint.Y == nextPoint.Y)
                 {
-                    Point midpoint = new(
-                        (int)Math.Round((nearestCrossingLine.Start.X + nearestCrossingLine.End.X) / 2D),
-                        (int)Math.Round((nearestCrossingLine.Start.Y + nearestCrossingLine.End.Y) / 2D));
-                //add pixel, check if crosses, if true remove pixel and build segments
-                }
-                return BuildSegments(start, nearestCrossingLine.Start)
-                    .Concat(BuildSegments(nearestCrossingLine.Start, end, start));
-            }
-        }
-
-        public Polyline Build(Point start, Point end)
-        {
-            var segments = BuildSegments(start, end).ToArray();
-            var newPolyline = new Polyline(_identifier++, segments);
-            _existingLines.Add(newPolyline);
-            return newPolyline;
-        }
-
-        private static Line GetNearestCrossingLine(Line newLine, Line[] crossingLines)
-        {
-            double a1 = newLine.GetA();
-            double b1 = newLine.GetB();
-            var crossingDistances = new double[crossingLines.Length];
-            for (short i = 0; i < crossingLines.Length; i++)
-            {
-                var line = crossingLines[i];
-                var a2 = line.GetA();
-                var b2 = line.GetB();
-                int x = (int)Math.Round((b2 - b1) / (a1 - a2));
-                int y = (int)Math.Round(a1 * x + b1);
-                crossingDistances[i] = CalculateDistance(newLine.Start, new Point(x, y));
-            }
-
-            return crossingLines[Array.IndexOf(crossingDistances, crossingDistances.Min())];
-        }
-
-        private static double CalculateDistance(Point a, Point b)
-        {
-            return Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
-        }
-
-        private Line[] GetCrossingLines(Point start, Point end, Point? previousPoint = null)
-        {
-            Vector newLineVector = new(start, end);
-            var lines = new List<Line>();
-            foreach(var polyline in _existingLines)
-            {
-                foreach(var segment in polyline.Segments)
-                {
-                    Vector newStartOldStart = new(start, segment.Start);
-                    Vector newStartOldEnd = new(start, segment.End);
-                    Vector existingVector = segment.GetVector();
-                    int v1 = newLineVector.Multiply(newStartOldStart);
-                    int v2 = newLineVector.Multiply(newStartOldEnd);
-                    int v3 = existingVector.Multiply(newStartOldStart);
-                    int v4 = existingVector.Multiply(new Vector(end, segment.Start));
-                    if(((v1 > 0 && v2 < 0 || v1 < 0 && v2 > 0)
-                        && (v3 > 0 && v4 < 0 || v3 < 0 && v4 > 0)))
+                    if (lastPoint.X > nextPoint.X)
                     {
-                        lines.Add(segment);
-                        
-                    }
-                    if (v1 == 0 || v2 == 0 || v3 == 0 || v4 == 0)
-                    {
-                        var a = segment.GetA();
-                        var b = segment.GetB();
-                        if (start.Y == a * start.X + b)
+                        if (TryMovingLeft(lastPoint, currentPoints, out next))
                         {
-                            if (start.Equals(segment.Start) || start.Equals(segment.End))
+                            return next;
+                        }
+                        else
+                        {
+                            if (TryMovingUp(lastPoint, currentPoints, out next))
                             {
-                                lines.Add(segment);
+                                return next;
+                            }
+                            else
+                            {
+                                if (TryMovingBelow(lastPoint, currentPoints, out next))
+                                {
+                                    return next;
+                                }
+                                else
+                                {
+                                    if (TryMovingRight(lastPoint, currentPoints, out next))
+                                    {
+                                        return next;
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("No path available");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (TryMovingRight(lastPoint, currentPoints, out next))
+                        {
+                            return next;
+                        }
+                        else
+                        {
+                            if (TryMovingUp(lastPoint, currentPoints, out next))
+                            {
+                                return next;
+                            }
+                            else
+                            {
+                                if (TryMovingBelow(lastPoint, currentPoints, out next))
+                                {
+                                    return next;
+                                }
+                                else
+                                {
+                                    if (TryMovingLeft(lastPoint, currentPoints, out next))
+                                    {
+                                        return next;
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("No path available");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (TryMovingBelow(lastPoint, currentPoints, out next))
+                    {
+                        return next;
+                    }
+                    else
+                    {
+                        if (lastPoint.X > nextPoint.X)
+                        {
+                            if (TryMovingLeft(lastPoint, currentPoints, out next))
+                            {
+                                return next;
+                            }
+                            else
+                            {
+                                if (TryMovingRight(lastPoint, currentPoints, out next))
+                                {
+                                    return next;
+                                }
+                                else
+                                {
+                                    if (TryMovingUp(lastPoint, currentPoints, out next))
+                                    {
+                                        return next;
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("No path available");
+                                    }
+                                }
                             }
                         }
                         else
                         {
-                            if (end.Y == a * end.X + b)
+                            if (TryMovingRight(lastPoint, currentPoints, out next))
                             {
-                                if (end.Equals(segment.Start) || end.Equals(segment.End))
-                                {
-                                    lines.Add(segment);
-                                }
+                                return next;
                             }
                             else
                             {
-                                if (!previousPoint.HasValue)
+                                if (TryMovingLeft(lastPoint, currentPoints, out next))
                                 {
-                                    continue;
+                                    return next;
                                 }
-                                var crossingLines = GetCrossingLines(previousPoint.Value, end);
-                                var crossedSegments = polyline.Segments.Count(s => crossingLines.Contains(s));
-                                if (crossedSegments > 0 && crossedSegments < polyline.Segments.Length)
+                                else
                                 {
-                                    lines.Add(segment);
+                                    if (TryMovingUp(lastPoint, currentPoints, out next))
+                                    {
+                                        return next;
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("No path available");
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-
-            return lines.ToArray();
         }
     }
 }

@@ -40,6 +40,7 @@ namespace DrawingLines
             this.Text = "DrawingLines";
             this.Load += new System.EventHandler(this.DrawingLinesForm_Load);
             this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.Form1_MouseClick);
+            this.Resize += new System.EventHandler(this.DrawingLinesForm_Resize);
             this.ResumeLayout(false);
 
         }
